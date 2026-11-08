@@ -266,12 +266,14 @@
   /* textos de la UI que arma el JS (es / en) */
   var L = CFG.lang === "en" ? {
     leadT: "Want an advisor to help you?", leadP: "Send your details and an advisor will contact you with your personalized proposal.",
+    phName: "E.g. John Smith", phPhone: "E.g. (619) 555-0123", phEmail: "E.g. john@yourbusiness.com",
     name: "Name", phone: "WhatsApp or phone", email: "Email", send: "Send and get help from an advisor",
     note: 'By sending you accept our <a href="{p}">privacy policy</a>. No spam.', priv: "privacy-policy.html",
     ok: "Done! We received your quote. An advisor will contact you very soon.", or: "Or if you prefer:",
     loading: "Loading quote tool…", close: "Close", dialog: "Free quote"
   } : {
     leadT: "¿Quieres que un asesor te ayude?", leadP: "Envía tus datos y un asesor te contacta con tu propuesta personalizada.",
+    phName: "Ej. Juan Pérez", phPhone: "Ej. 664 123 4567", phEmail: "Ej. juan@tunegocio.com",
     name: "Nombre", phone: "WhatsApp o teléfono", email: "Correo", send: "Enviar y recibir asistencia de un asesor",
     note: 'Al enviar aceptas nuestro <a href="{p}">aviso de privacidad</a>. Sin spam.', priv: "aviso-de-privacidad.html",
     ok: "¡Listo! Recibimos tu cotización. Un asesor te contactará muy pronto.", or: "O si lo prefieres:",
@@ -293,9 +295,9 @@
       fm.className = "form wiz-lead"; fm.setAttribute("data-lead", "wizform"); fm.noValidate = true;
       fm.innerHTML = '<div class="hp" aria-hidden="true"><label>Website<input name="website" tabindex="-1" autocomplete="off"></label></div>' +
         '<div class="wiz-lead__head"><p class="wiz-lead__t">' + L.leadT + '</p><p class="wiz-lead__p">' + L.leadP + '</p></div>' +
-        '<div class="form__row"><div><label class="label" for="' + u + '-name">' + L.name + '</label><input class="input" id="' + u + '-name" name="nombre" autocomplete="name" required maxlength="120"></div>' +
-        '<div><label class="label" for="' + u + '-phone">' + L.phone + '</label><input class="input" id="' + u + '-phone" name="telefono" type="tel" inputmode="tel" autocomplete="tel" required maxlength="40"></div></div>' +
-        '<div><label class="label" for="' + u + '-email">' + L.email + '</label><input class="input" id="' + u + '-email" name="email" type="email" autocomplete="email" required maxlength="160"></div>' +
+        '<div class="form__row"><div><label class="label" for="' + u + '-name">' + L.name + '</label><input class="input" id="' + u + '-name" name="nombre" autocomplete="name" placeholder="' + L.phName + '" required maxlength="120"></div>' +
+        '<div><label class="label" for="' + u + '-phone">' + L.phone + '</label><input class="input" id="' + u + '-phone" name="telefono" type="tel" inputmode="tel" autocomplete="tel" placeholder="' + L.phPhone + '" required maxlength="40"></div></div>' +
+        '<div><label class="label" for="' + u + '-email">' + L.email + '</label><input class="input" id="' + u + '-email" name="email" type="email" autocomplete="email" placeholder="' + L.phEmail + '" required maxlength="160"></div>' +
         '<button class="btn btn--slant btn--lg wiz-lead__btn" type="submit">' + L.send + '</button>' +
         '<p class="form__note">' + L.note.replace("{p}", new URL(L.priv, base || location.href).href) + '</p>' +
         '<div class="form__ok" role="status">' + L.ok + '</div>';
