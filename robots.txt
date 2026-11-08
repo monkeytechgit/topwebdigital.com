@@ -1,0 +1,10 @@
+# Top Web Digital — https://www.topwebdigital.com/
+User-agent: *
+Allow: /
+Disallow: /gracias.html
+Disallow: /en/thank-you.html
+
+# Índice de sitemaps (español + inglés)
+Sitemap: https://www.topwebdigital.com/sitemap.xml
+Sitemap: https://www.topwebdigital.com/sitemap-es.xml
+Sitemap: https://www.topwebdigital.com/sitemap-en.xml
