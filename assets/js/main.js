@@ -2,6 +2,8 @@
 (function () {
   "use strict";
   var CFG = window.TWD || {};
+  var JS_SRC = (document.currentScript && document.currentScript.src) || (function () { var x = document.querySelector('script[src*="main.js"]'); return x ? x.src : location.href; })();
+  var JS_BASE = JS_SRC.split("?")[0].replace(/[^\/]*$/, ""), JS_VER = (JS_SRC.match(/[?&]v=([\w.]+)/) || [0, "1"])[1];
   var T = CFG.t || {};
   var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   var $ = function (s, c) { return (c || document).querySelector(s); };
@@ -513,11 +515,10 @@
     qm.classList.add("is-open"); qm.setAttribute("aria-hidden", "false");
     setTimeout(function () { var c = $(".modal__close", qm); if (c) c.focus(); }, 60);
     if (qmLoaded) return;
-    var url = new URL(href, location.href).href;
-    fetch(url, { credentials: "same-origin" }).then(function (r) { if (!r.ok) throw 0; return r.text(); }).then(function (h) {
-      var doc = new DOMParser().parseFromString(h, "text/html"), src = $("[data-wizard]", doc);
-      if (!src) throw 0;
-      var w = document.importNode(src, true);
+    var url = new URL(href, location.href).href, lang = CFG.lang === "en" ? "en" : "es";
+    var mount = function () {
+      var t = document.createElement("template"); t.innerHTML = window.TWD_WIZ[lang];
+      var w = t.content.querySelector("[data-wizard]"); if (!w) throw 0;
       w.classList.remove("rv", "rv--l", "rv--r"); w.dataset.ns = "m_";
       // ids y grupos propios para no chocar con el cotizador de la página
       $$("[id]", w).forEach(function (el) { el.id = "m_" + el.id; });
@@ -525,7 +526,13 @@
       $$("input[name]", w).forEach(function (el) { el.name = "m_" + el.name; });
       qmBody.innerHTML = ""; qmBody.appendChild(w); qmLoaded = true;
       initWizard(w, url);
-    }).catch(function () { location.href = url; });
+    };
+    var go = function () { try { mount(); } catch (e) { location.href = url; } };
+    if (window.TWD_WIZ && window.TWD_WIZ[lang]) { go(); return; }
+    // el cotizador viene en assets/js/quote-es.js / quote-en.js (funciona también sin servidor)
+    var sc = document.createElement("script"); sc.src = JS_BASE + "quote-" + lang + ".js?v=" + JS_VER;
+    sc.onload = go; sc.onerror = function () { location.href = url; };
+    document.head.appendChild(sc);
   }
   function qmClose() {
     if (!qm || !qm.classList.contains("is-open")) return;
