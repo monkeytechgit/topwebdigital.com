@@ -261,6 +261,7 @@
   }
 
   /* ---------- Cotizador ---------- */
+  var quoteSummary = "";
   var wiz = $("[data-wizard]");
   if (wiz) {
     var steps = $$(".wiz-step", wiz), bar = $(".progress span", wiz), idx = 0, P = JSON.parse(wiz.dataset.prices);
@@ -289,7 +290,7 @@
       $(".estimate__sum", wiz).innerHTML = labels.map(function (l) { return "<span>" + l + "</span>"; }).join("");
       var msg = (T.waQuote || "Hola, usé el cotizador de su sitio. Me interesa:") + "\n• " + labels.join("\n• ") + "\n" + (T.range || "Rango estimado") + ": " + txt + " " + P.cur;
       $(".js-wa-quote", wiz).href = waLink(msg);
-      var hid = $('input[name="resumen"]', wiz.parentNode); if (hid) hid.value = msg;
+      quoteSummary = labels.join(" | ") + " — " + txt + " " + P.cur;
     }
     next.addEventListener("click", function () {
       var cur = steps[idx];
@@ -364,20 +365,40 @@
     if (v && v.dataset.video) { e.preventDefault(); openModal('<video src="' + v.dataset.video + '" controls autoplay playsinline style="width:100%;border-radius:16px"></video>'); }
   });
 
-  /* ---------- Formularios ---------- */
+  /* ---------- Formularios → Supabase (tabla contact_leads, solo inserción) ---------- */
+  var SB = { url: "https://ocydhmnlomnibdruinhb.supabase.co/rest/v1/contact_leads", key: "sb_publishable_vb8f13vBEUls6RNI7PjD1Q_dey01-Bs" };
   $$("form[data-lead]").forEach(function (f) {
     f.addEventListener("submit", function (e) {
       e.preventDefault();
       if (!f.checkValidity()) { f.reportValidity(); return; }
-      var fd = new FormData(f), obj = {}; fd.forEach(function (v, k) { obj[k] = v; });
+      var fd = new FormData(f), obj = {}; fd.forEach(function (v, k) { obj[k] = String(v).trim(); });
+      if (obj.website) return; // honeypot anti-spam
       obj.pagina = location.href;
       var btn = $('button[type="submit"]', f), txt = btn ? btn.textContent : "";
       if (btn) { btn.disabled = true; btn.textContent = T.sending || "Enviando…"; }
-      var done = function () { f.classList.add("is-sent"); if (btn) { btn.disabled = false; btn.textContent = txt; } if (window.gtag) gtag("event", "generate_lead", { form: f.dataset.lead }); };
-      if (CFG.endpoint) {
+      var done = function () { f.classList.add("is-sent"); f.reset(); if (btn) { btn.disabled = false; btn.textContent = txt; } if (window.gtag) gtag("event", "generate_lead", { form: f.dataset.lead }); };
+      var fail = function () { if (btn) { btn.disabled = false; btn.textContent = txt; } toast(T.formErr || "No se pudo enviar. Escríbenos por WhatsApp."); };
+      var pick = function () { for (var i = 0; i < arguments.length; i++) if (obj[arguments[i]]) return obj[arguments[i]]; return null; };
+      if (SB.url) {
+        var row = {
+          full_name: pick("nombre", "name"),
+          phone: pick("telefono", "phone"),
+          email: pick("email"),
+          company: pick("empresa", "company"),
+          industry: pick("giro", "industry"),
+          process_problem: pick("mensaje", "message"),
+          source: f.dataset.lead === "quoteform" ? "cotizador" : "contacto",
+          quote_summary: f.dataset.lead === "quoteform" && quoteSummary ? quoteSummary : null,
+          lang: CFG.lang === "en" ? "en" : "es",
+          page_url: location.href.slice(0, 500)
+        };
+        fetch(SB.url, { method: "POST", headers: { apikey: SB.key, "Content-Type": "application/json", Prefer: "return=minimal" }, body: JSON.stringify(row) })
+          .then(function (r) { if (!r.ok) throw 0; done(); })
+          .catch(fail);
+      } else if (CFG.endpoint) {
         fetch(CFG.endpoint, { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify(obj) })
           .then(function (r) { if (!r.ok) throw 0; done(); })
-          .catch(function () { if (btn) { btn.disabled = false; btn.textContent = txt; } toast(T.formErr || "No se pudo enviar. Escríbenos por WhatsApp."); });
+          .catch(fail);
       } else {
         // Sin servidor configurado: el mensaje se arma y se abre en WhatsApp
         var lines = Object.keys(obj).filter(function (k) { return obj[k] && k !== "pagina"; }).map(function (k) { return k + ": " + obj[k]; });
