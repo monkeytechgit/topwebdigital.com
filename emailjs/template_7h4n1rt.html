@@ -1,0 +1,64 @@
+<div style="margin:0;padding:24px 12px;background:#f3f5f9;font-family:system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;color:#1f2937">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;background:#ffffff;border-radius:14px;overflow:hidden;border:1px solid #e5e7eb">
+    <!-- Encabezado -->
+    <tr>
+      <td style="background:#0b1f3a;padding:22px 26px">
+        <div style="color:#7dd3fc;font-size:12px;letter-spacing:.08em;text-transform:uppercase;font-weight:700">Top Web Digital · Nuevo lead</div>
+        <div style="color:#ffffff;font-size:22px;font-weight:800;margin-top:6px">{{source_label}}</div>
+        <div style="color:#cbd5e1;font-size:13px;margin-top:4px">{{time}}</div>
+      </td>
+    </tr>
+
+    <!-- Cliente -->
+    <tr>
+      <td style="padding:22px 26px 6px">
+        <div style="font-size:12px;color:#6b7280;text-transform:uppercase;letter-spacing:.06em;font-weight:700;margin-bottom:10px">Datos del cliente</div>
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:15px">
+          <tr><td style="padding:7px 0;color:#6b7280;width:130px">Nombre</td><td style="padding:7px 0;font-weight:700">{{name}}</td></tr>
+          <tr><td style="padding:7px 0;color:#6b7280">WhatsApp / Tel.</td><td style="padding:7px 0;font-weight:700">{{phone}}</td></tr>
+          <tr><td style="padding:7px 0;color:#6b7280">Correo</td><td style="padding:7px 0">{{email}}</td></tr>
+          <tr><td style="padding:7px 0;color:#6b7280">Empresa</td><td style="padding:7px 0">{{company}}</td></tr>
+          <tr><td style="padding:7px 0;color:#6b7280">Giro</td><td style="padding:7px 0">{{industry}}</td></tr>
+          <tr><td style="padding:7px 0;color:#6b7280">Idioma del sitio</td><td style="padding:7px 0">{{lang}}</td></tr>
+        </table>
+      </td>
+    </tr>
+
+    <!-- Cotización -->
+    <tr>
+      <td style="padding:14px 26px 6px">
+        <div style="font-size:12px;color:#6b7280;text-transform:uppercase;letter-spacing:.06em;font-weight:700;margin-bottom:10px">Especificaciones de la cotización</div>
+        <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:10px;padding:14px 16px">
+          <div style="font-size:14px;line-height:1.7;white-space:pre-line">{{quote_items}}</div>
+          <div style="margin-top:12px;padding-top:12px;border-top:1px dashed #bae6fd;font-size:14px;color:#0369a1">
+            Rango estimado: <strong style="font-size:17px;color:#0b1f3a">{{quote_range}}</strong>
+          </div>
+        </div>
+      </td>
+    </tr>
+
+    <!-- Mensaje -->
+    <tr>
+      <td style="padding:14px 26px 6px">
+        <div style="font-size:12px;color:#6b7280;text-transform:uppercase;letter-spacing:.06em;font-weight:700;margin-bottom:10px">¿Qué necesita?</div>
+        <div style="background:#f9fafb;border-left:4px solid #0ea5e9;border-radius:6px;padding:14px 16px;font-size:15px;line-height:1.6;white-space:pre-line">{{message}}</div>
+      </td>
+    </tr>
+
+    <!-- Acciones -->
+    <tr>
+      <td style="padding:20px 26px 8px">
+        <a href="{{wa_link}}" style="display:inline-block;background:#22c55e;color:#ffffff;text-decoration:none;font-weight:700;font-size:15px;padding:12px 20px;border-radius:10px;margin:0 8px 8px 0">Responder por WhatsApp</a>
+        <a href="mailto:{{reply_to}}" style="display:inline-block;background:#0b1f3a;color:#ffffff;text-decoration:none;font-weight:700;font-size:15px;padding:12px 20px;border-radius:10px;margin:0 0 8px 0">Responder por correo</a>
+      </td>
+    </tr>
+
+    <!-- Pie -->
+    <tr>
+      <td style="padding:14px 26px 22px;font-size:12px;color:#9ca3af;border-top:1px solid #f1f5f9">
+        Origen: {{source}} · Enviado desde <a href="{{page_url}}" style="color:#0ea5e9">{{page_url}}</a><br>
+        Responde en menos de 1 hora en horario laboral, como promete el sitio.
+      </td>
+    </tr>
+  </table>
+</div>

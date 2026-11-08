@@ -261,11 +261,46 @@
   }
 
   /* ---------- Cotizador ---------- */
-  var quoteSummary = "";
-  var wiz = $("[data-wizard]");
-  if (wiz) {
+  /* textos de la UI que arma el JS (es / en) */
+  var L = CFG.lang === "en" ? {
+    leadT: "Want an advisor to help you?", leadP: "Send your details and an advisor will contact you with your personalized proposal.",
+    name: "Name", phone: "WhatsApp or phone", email: "Email (optional)", send: "Send and get help from an advisor",
+    note: 'By sending you accept our <a href="{p}">privacy policy</a>. No spam.', priv: "privacy-policy.html",
+    ok: "Done! We received your quote. An advisor will contact you very soon.", or: "Or if you prefer:",
+    loading: "Loading quote tool…", close: "Close", dialog: "Free quote"
+  } : {
+    leadT: "¿Quieres que un asesor te ayude?", leadP: "Envía tus datos y un asesor te contacta con tu propuesta personalizada.",
+    name: "Nombre", phone: "WhatsApp o teléfono", email: "Correo (opcional)", send: "Enviar y recibir asistencia de un asesor",
+    note: 'Al enviar aceptas nuestro <a href="{p}">aviso de privacidad</a>. Sin spam.', priv: "aviso-de-privacidad.html",
+    ok: "¡Listo! Recibimos tu cotización. Un asesor te contactará muy pronto.", or: "O si lo prefieres:",
+    loading: "Cargando cotizador…", close: "Cerrar", dialog: "Cotiza gratis"
+  };
+  var SPIN = '<span class="spin" aria-hidden="true"></span>';
+
+  function initWizard(wiz, base) {
+    if (wiz._init) return; wiz._init = true;
+    var ns = wiz.dataset.ns || "";
     var steps = $$(".wiz-step", wiz), bar = $(".progress span", wiz), idx = 0, P = JSON.parse(wiz.dataset.prices);
     var back = $(".js-back", wiz), next = $(".js-next", wiz), count = $(".js-stepn", wiz);
+    wiz._quote = { done: false, items: [], range: "", summary: "" };
+    // paso final: datos de contacto para que un asesor dé seguimiento
+    var last = steps[steps.length - 1], est = $(".estimate", last), sum = $(".estimate__sum", last);
+    if (sum && !$(".wiz-lead", last)) {
+      var u = ns || "w";
+      var fm = document.createElement("form");
+      fm.className = "form wiz-lead"; fm.setAttribute("data-lead", "wizform"); fm.noValidate = true;
+      fm.innerHTML = '<div class="hp" aria-hidden="true"><label>Website<input name="website" tabindex="-1" autocomplete="off"></label></div>' +
+        '<div class="wiz-lead__head"><p class="wiz-lead__t">' + L.leadT + '</p><p class="wiz-lead__p">' + L.leadP + '</p></div>' +
+        '<div class="form__row"><div><label class="label" for="' + u + '-name">' + L.name + '</label><input class="input" id="' + u + '-name" name="nombre" autocomplete="name" required maxlength="120"></div>' +
+        '<div><label class="label" for="' + u + '-phone">' + L.phone + '</label><input class="input" id="' + u + '-phone" name="telefono" type="tel" inputmode="tel" autocomplete="tel" required maxlength="40"></div></div>' +
+        '<div><label class="label" for="' + u + '-email">' + L.email + '</label><input class="input" id="' + u + '-email" name="email" type="email" autocomplete="email" maxlength="160"></div>' +
+        '<button class="btn btn--slant btn--lg wiz-lead__btn" type="submit">' + L.send + '</button>' +
+        '<p class="form__note">' + L.note.replace("{p}", new URL(L.priv, base || location.href).href) + '</p>' +
+        '<div class="form__ok" role="status">' + L.ok + '</div>';
+      sum.insertAdjacentElement("afterend", fm);
+      var or = document.createElement("p"); or.className = "wiz-or"; or.textContent = L.or; fm.insertAdjacentElement("afterend", or);
+      bindLead(fm);
+    }
     function show(n, dir) {
       steps.forEach(function (s, i) { s.classList.toggle("is-active", i === n); s.classList.toggle("is-back", dir < 0); });
       idx = n; bar.style.width = ((n + 1) / steps.length * 100) + "%";
@@ -275,7 +310,7 @@
       next.textContent = n === steps.length - 2 ? (T.seePrice || "Ver mi precio") : (T.next || "Siguiente");
       if (n === steps.length - 1) { next.hidden = true; estimate(); }
     }
-    function val(name) { var c = $$('input[name="' + name + '"]:checked', wiz); return c.map(function (x) { return x.value; }); }
+    function val(name) { var c = $$('input[name="' + ns + name + '"]:checked', wiz); return c.map(function (x) { return x.value; }); }
     function estimate() {
       var type = val("q_type")[0] || "info", pages = val("q_pages")[0] || "1-5", extras = val("q_extra"), speed = val("q_time")[0] || "normal";
       var lo = P.base[type][0], hi = P.base[type][1];
@@ -286,11 +321,17 @@
       var fmt = function (v) { return v.toLocaleString(locale, { style: "currency", currency: P.cur, maximumFractionDigits: 0 }); };
       var txt = fmt(r(lo)) + " – " + fmt(r(hi));
       $(".estimate__range", wiz).textContent = txt + " " + P.cur;
-      var labels = $$("input:checked", wiz).map(function (x) { return x.dataset.label; });
+      // etiquetas en orden: pregunta → respuesta
+      var items = [];
+      steps.slice(0, -1).forEach(function (st) {
+        var ch = $$("input:checked", st).map(function (x) { return x.dataset.label; });
+        if (ch.length) items.push(($(".wiz-q", st) ? $(".wiz-q", st).textContent.replace(/[¿?]/g, "").trim() + ": " : "") + ch.join(", "));
+      });
+      var labels = $$("input:checked", wiz).filter(function (x) { return x.dataset.label; }).map(function (x) { return x.dataset.label; });
       $(".estimate__sum", wiz).innerHTML = labels.map(function (l) { return "<span>" + l + "</span>"; }).join("");
       var msg = (T.waQuote || "Hola, usé el cotizador de su sitio. Me interesa:") + "\n• " + labels.join("\n• ") + "\n" + (T.range || "Rango estimado") + ": " + txt + " " + P.cur;
-      $(".js-wa-quote", wiz).href = waLink(msg);
-      quoteSummary = labels.join(" | ") + " — " + txt + " " + P.cur;
+      var wl = $(".js-wa-quote", wiz); if (wl) wl.href = waLink(msg);
+      wiz._quote = { done: true, items: items, range: txt + " " + P.cur, summary: items.join(" | ") + " — " + txt + " " + P.cur };
     }
     next.addEventListener("click", function () {
       var cur = steps[idx];
@@ -298,11 +339,16 @@
       if (idx < steps.length - 1) show(idx + 1, 1);
     });
     back.addEventListener("click", function () { if (idx > 0) show(idx - 1, -1); });
-    $$(".js-restart", wiz).forEach(function (b) { b.addEventListener("click", function () { $$("input", wiz).forEach(function (i) { i.checked = false; }); show(0, -1); }); });
+    $$(".js-restart", wiz).forEach(function (b) { b.addEventListener("click", function () {
+      $$(".wiz-step input", wiz).forEach(function (i) { i.checked = false; });
+      $$(".wiz-lead", wiz).forEach(function (f) { f.reset(); f.classList.remove("is-sent"); });
+      wiz._quote = { done: false, items: [], range: "", summary: "" }; show(0, -1);
+    }); });
     // avanzar solo al elegir (preguntas de una sola opción)
     $$('.wiz-step input[type="radio"]', wiz).forEach(function (i) { i.addEventListener("change", function () { setTimeout(function () { if (idx < steps.length - 2) show(idx + 1, 1); }, 280); }); });
     show(0, 1);
   }
+  $$("[data-wizard]").forEach(function (w) { initWizard(w); });
 
   /* ---------- Auditoría gratis (Google PageSpeed Insights) ---------- */
   var audit = $("[data-audit]");
@@ -366,35 +412,76 @@
   });
 
   /* ---------- Formularios → Supabase (tabla contact_leads, solo inserción) ---------- */
+  var EJS = { service: "service_mr6qhfy", template: "template_7h4n1rt", key: "5vTFdcXJ0G3y7ZaPs" };
   var SB = { url: "https://ocydhmnlomnibdruinhb.supabase.co/rest/v1/contact_leads", key: "sb_publishable_vb8f13vBEUls6RNI7PjD1Q_dey01-Bs" };
-  $$("form[data-lead]").forEach(function (f) {
+  $$("form[data-lead]").forEach(bindLead);
+  function bindLead(f) {
+    if (f._bound) return; f._bound = true;
     f.addEventListener("submit", function (e) {
       e.preventDefault();
       if (!f.checkValidity()) { f.reportValidity(); return; }
       var fd = new FormData(f), obj = {}; fd.forEach(function (v, k) { obj[k] = String(v).trim(); });
       if (obj.website) return; // honeypot anti-spam
       obj.pagina = location.href;
-      var btn = $('button[type="submit"]', f), txt = btn ? btn.textContent : "";
-      if (btn) { btn.disabled = true; btn.textContent = T.sending || "Enviando…"; }
-      var done = function () { f.classList.add("is-sent"); f.reset(); if (btn) { btn.disabled = false; btn.textContent = txt; } if (window.gtag) gtag("event", "generate_lead", { form: f.dataset.lead }); };
-      var fail = function () { if (btn) { btn.disabled = false; btn.textContent = txt; } toast(T.formErr || "No se pudo enviar. Escríbenos por WhatsApp."); };
+      if (f.classList.contains("is-busy")) return;
+      var btn = $('button[type="submit"]', f), txt = btn ? btn.innerHTML : "";
+      // indicador circular mientras se registra
+      var busy = function (on) {
+        f.classList.toggle("is-busy", on); f.setAttribute("aria-busy", String(on));
+        $$("input, select, textarea, button", f).forEach(function (el) { el.disabled = on; });
+        if (btn) btn.innerHTML = on ? SPIN + "<span>" + (T.sending || "Enviando…") + "</span>" : txt;
+        var ov = $(".form__busy", f);
+        if (on && !ov) { ov = document.createElement("div"); ov.className = "form__busy"; ov.setAttribute("role", "status"); ov.innerHTML = '<span class="spin spin--lg" aria-hidden="true"></span><span class="sr-only">' + (T.sending || "Enviando…") + "</span>"; f.appendChild(ov); }
+      };
+      busy(true);
+      var done = function () { busy(false); f.reset(); f.classList.add("is-sent"); if (window.gtag) gtag("event", "generate_lead", { form: f.dataset.lead }); };
+      var fail = function () { busy(false); toast(T.formErr || "No se pudo enviar. Escríbenos por WhatsApp."); };
       var pick = function () { for (var i = 0; i < arguments.length; i++) if (obj[arguments[i]]) return obj[arguments[i]]; return null; };
-      if (SB.url) {
-        var row = {
-          full_name: pick("nombre", "name"),
-          phone: pick("telefono", "phone"),
-          email: pick("email"),
-          company: pick("empresa", "company"),
-          industry: pick("giro", "industry"),
-          process_problem: pick("mensaje", "message"),
-          source: f.dataset.lead === "quoteform" ? "cotizador" : "contacto",
-          quote_summary: f.dataset.lead === "quoteform" && quoteSummary ? quoteSummary : null,
-          lang: CFG.lang === "en" ? "en" : "es",
-          page_url: location.href.slice(0, 500)
-        };
-        fetch(SB.url, { method: "POST", headers: { apikey: SB.key, "Content-Type": "application/json", Prefer: "return=minimal" }, body: JSON.stringify(row) })
-          .then(function (r) { if (!r.ok) throw 0; done(); })
-          .catch(fail);
+      var en = CFG.lang === "en", kind = f.dataset.lead;
+      // datos del cotizador: el de este formulario (paso final / modal) o el de la página si se completó
+      var w = f.closest("[data-wizard]") || (kind === "quoteform" ? $("[data-wizard]") : null);
+      var Q = w && w._quote && w._quote.done ? w._quote : null;
+      var isQuote = kind === "quoteform" || kind === "wizform" || !!Q;
+      var label = kind === "wizform" ? "Cotizador rápido completo" : isQuote ? "Solicitud de cotización" : "Mensaje de contacto";
+      var row = {
+        full_name: pick("nombre", "name"),
+        phone: pick("telefono", "phone"),
+        email: pick("email"),
+        company: pick("empresa", "company"),
+        industry: pick("giro", "industry"),
+        process_problem: pick("mensaje", "message"),
+        source: isQuote ? "cotizador" : "contacto",
+        quote_summary: Q ? Q.summary.slice(0, 3000) : null,
+        lang: en ? "en" : "es",
+        page_url: location.href.slice(0, 500)
+      };
+      if (SB.url || EJS.service) {
+        var jobs = [];
+        // 1) Guardar en Supabase
+        if (SB.url) jobs.push(fetch(SB.url, { method: "POST", headers: { apikey: SB.key, "Content-Type": "application/json", Prefer: "return=minimal" }, body: JSON.stringify(row) })
+          .then(function (r) { if (!r.ok) throw 0; return 1; }));
+        // 2) Aviso por correo con EmailJS (API REST, sin librería)
+        if (EJS.service) {
+          var dig = (row.phone || "").replace(/\D/g, ""); if (dig.length === 10) dig = (en ? "1" : "52") + dig;
+          var noItems = en ? "Did not use the estimator" : "No usó el cotizador";
+          var params = {
+            title: label + " · " + row.full_name + (row.industry ? " · " + row.industry : "") + (Q ? " · " + Q.range : ""),
+            name: row.full_name, phone: row.phone || "—", email: row.email || "—", reply_to: row.email || "",
+            company: row.company || "—", industry: row.industry || "—", message: row.process_problem || "—",
+            source: row.source + (f.closest(".modal--quote") ? " (ventana emergente)" : ""), source_label: label,
+            quote_items: Q && Q.items.length ? "• " + Q.items.join("\n• ") : noItems,
+            quote_range: Q ? Q.range : "—",
+            lang: en ? "Inglés (EN)" : "Español (ES)", page_url: location.href,
+            wa_link: dig ? "https://wa.me/" + dig : "",
+            time: new Date().toLocaleString("es-MX", { timeZone: "America/Tijuana", dateStyle: "full", timeStyle: "short" })
+          };
+          jobs.push(fetch("https://api.emailjs.com/api/v1.0/email/send", { method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ service_id: EJS.service, template_id: EJS.template, user_id: EJS.key, template_params: params }) })
+            .then(function (r) { if (!r.ok) throw 0; return 1; }));
+        }
+        // Éxito si al menos uno funcionó (el lead no se pierde)
+        var left = jobs.length, ok = false;
+        jobs.forEach(function (j) { j.then(function () { ok = true; }, function () {}).then(function () { if (--left === 0) (ok ? done : fail)(); }); });
       } else if (CFG.endpoint) {
         fetch(CFG.endpoint, { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify(obj) })
           .then(function (r) { if (!r.ok) throw 0; done(); })
@@ -406,7 +493,57 @@
         done();
       }
     });
+  }
+
+  /* ---------- Cotizador en ventana emergente (botón "Cotiza gratis" del menú) ---------- */
+  var qm, qmBody, qmLoaded = false, qmLast;
+  function qmOpen(href) {
+    qmLast = document.activeElement;
+    if (!qm) {
+      qm = document.createElement("div"); qm.className = "modal modal--quote"; qm.setAttribute("aria-hidden", "true");
+      qm.innerHTML = '<div class="modal__scrim"></div><div class="modal__box" role="dialog" aria-modal="true" aria-label="' + L.dialog + '">' +
+        '<button class="modal__close" type="button" aria-label="' + L.close + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg></button>' +
+        '<div class="modal__content"><div class="qm-loading" role="status">' + SPIN.replace("spin", "spin spin--lg") + "<span>" + L.loading + "</span></div></div></div>";
+      document.body.appendChild(qm); qmBody = $(".modal__content", qm);
+      $(".modal__close", qm).addEventListener("click", qmClose);
+    }
+    // lo único con lo que se puede interactuar: el resto de la página queda inerte
+    $$("body > *").forEach(function (el) { if (el !== qm && !el.classList.contains("toast")) { el.inert = true; el.setAttribute("aria-hidden", "true"); } });
+    document.documentElement.classList.add("is-qm-open");
+    qm.classList.add("is-open"); qm.setAttribute("aria-hidden", "false");
+    setTimeout(function () { var c = $(".modal__close", qm); if (c) c.focus(); }, 60);
+    if (qmLoaded) return;
+    var url = new URL(href, location.href).href;
+    fetch(url, { credentials: "same-origin" }).then(function (r) { if (!r.ok) throw 0; return r.text(); }).then(function (h) {
+      var doc = new DOMParser().parseFromString(h, "text/html"), src = $("[data-wizard]", doc);
+      if (!src) throw 0;
+      var w = document.importNode(src, true);
+      w.classList.remove("rv", "rv--l", "rv--r"); w.dataset.ns = "m_";
+      // ids y grupos propios para no chocar con el cotizador de la página
+      $$("[id]", w).forEach(function (el) { el.id = "m_" + el.id; });
+      $$("label[for]", w).forEach(function (el) { el.htmlFor = "m_" + el.htmlFor; });
+      $$("input[name]", w).forEach(function (el) { el.name = "m_" + el.name; });
+      qmBody.innerHTML = ""; qmBody.appendChild(w); qmLoaded = true;
+      initWizard(w, url);
+    }).catch(function () { location.href = url; });
+  }
+  function qmClose() {
+    if (!qm || !qm.classList.contains("is-open")) return;
+    qm.classList.remove("is-open"); qm.setAttribute("aria-hidden", "true");
+    $$("body > *").forEach(function (el) { if (el !== qm) { el.inert = false; el.removeAttribute("aria-hidden"); } });
+    document.documentElement.classList.remove("is-qm-open");
+    // si ya envió, la próxima vez empieza de cero
+    var w = $("[data-wizard]", qm), sent = w && $(".wiz-lead.is-sent", w);
+    if (sent) { var rb = $(".js-restart", w); if (rb) rb.click(); }
+    if (qmLast && qmLast.focus) qmLast.focus();
+  }
+  document.addEventListener("click", function (e) {
+    var a = e.target.closest("a.btn--quote, .drawer__cta a:not(.btn--wa), .mobile-cta a:not(.btn--wa)");
+    if (!a || e.ctrlKey || e.metaKey || e.shiftKey || e.button > 0) return;
+    if (!/(cotizador|quote)\.html(#.*)?$/.test(a.getAttribute("href") || "")) return;
+    e.preventDefault(); closeMenu(); qmOpen(a.getAttribute("href"));
   });
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape") qmClose(); });
 
   /* ---------- WhatsApp flotante: sugerencia ---------- */
   var wa = $(".wa-float");
